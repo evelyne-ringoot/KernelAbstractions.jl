@@ -10,7 +10,7 @@ module EnzymeExt
     const KA = KernelAbstractions
     import KernelAbstractions: Kernel, StaticSize, launch_config, allocate,
                                blocks, mkcontext, CompilerMetadata, CPU, GPU, argconvert,
-                               supports_enzyme, __fake_compiler_job, backend,
+                               supports_enzyme, backend,
                                __index_Group_Cartesian, __index_Global_Linear
 
     EnzymeRules.inactive(::Type{StaticSize}, x...) = nothing
@@ -73,7 +73,7 @@ module EnzymeExt
         dev_args2 = ((argconvert(kernel, a) for a in args2)...,)
         dev_TT = map(Core.Typeof, dev_args2)
 
-        job = __fake_compiler_job(backend(kernel))
+        job = EnzymeCore.compiler_job_from_backend(backend(kernel), typeof(()->return), Tuple{})
         TapeType = EnzymeCore.tape_type(
             job, ReverseSplitModified(ReverseSplitWithPrimal, ModifiedBetween),
             FT, Const,  Const{ctxTy}, dev_TT...
@@ -195,9 +195,6 @@ module EnzymeExt
         ::Type{Const{Nothing}}, args::Vararg{Any, N}; ndrange=nothing, workgroupsize=nothing
         ) where N
         kernel = func.val
-        if !supports_enzyme(backend(kernel))
-            error("KernelAbstractions backend does not support Enzyme")
-        end
         f = kernel.f
 
         ndrange, workgroupsize, iterspace, dynamic = launch_config(kernel, ndrange, workgroupsize)
